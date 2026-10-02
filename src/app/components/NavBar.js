@@ -17,7 +17,7 @@ export default function Navbar() {
         }}
       >
         <a className="navbar-brand me-4" href="/">
-          Musicão
+          IFone
         </a>
 
         <button
@@ -55,11 +55,19 @@ export default function Navbar() {
               </a>
             </li>
 
-              <li className="nav-item">
-              <a className="nav-link" href="/resenhas">
+            <li className="nav-item">
+              <a className="nav-link" href="">
+                Match
+              </a>
+            </li>
+
+            <li className="nav-item">
+              <a className="nav-link" href="/perfil">
                 Meu Perfil
               </a>
             </li>
+
+            
           </ul>
 
           <form

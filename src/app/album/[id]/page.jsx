@@ -10,8 +10,13 @@ export default function AlbumPage() {
   const [album, setAlbum] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
+  const [listenLater, setListenLater] = useState(false);
+
+  const [listas, setListas] = useState([]);
+  const [mostrarListas, setMostrarListas] = useState(false);
 
   useEffect(() => {
     async function loadAlbum() {
@@ -20,7 +25,9 @@ export default function AlbumPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Erro ao carregar álbum');
+          throw new Error(
+            data.error || 'Erro ao carregar álbum'
+          );
         }
 
         setAlbum(data);
@@ -46,6 +53,22 @@ export default function AlbumPage() {
         setRating(ratings[albumId]);
       }
     }
+
+    const savedListenLater = localStorage.getItem(
+      'listenLaterAlbums'
+    );
+
+    if (savedListenLater) {
+      const albums = JSON.parse(savedListenLater);
+
+      setListenLater(albums.includes(albumId));
+    }
+
+    const savedLists = localStorage.getItem('albumLists');
+
+    if (savedLists) {
+      setListas(JSON.parse(savedLists));
+    }
   }, [albumId]);
 
   function rateAlbum(newRating) {
@@ -63,6 +86,55 @@ export default function AlbumPage() {
       'albumRatings',
       JSON.stringify(ratings)
     );
+  }
+
+  function toggleListenLater() {
+    const savedListenLater = localStorage.getItem(
+      'listenLaterAlbums'
+    );
+
+    let albums = savedListenLater
+      ? JSON.parse(savedListenLater)
+      : [];
+
+    if (albums.includes(albumId)) {
+      albums = albums.filter((id) => id !== albumId);
+      setListenLater(false);
+    } else {
+      albums.push(albumId);
+      setListenLater(true);
+    }
+
+    localStorage.setItem(
+      'listenLaterAlbums',
+      JSON.stringify(albums)
+    );
+  }
+
+  function adicionarNaLista(listaId) {
+    const novasListas = listas.map((lista) => {
+      if (lista.id !== listaId) {
+        return lista;
+      }
+
+      if (lista.albums.includes(albumId)) {
+        return lista;
+      }
+
+      return {
+        ...lista,
+        albums: [...lista.albums, albumId],
+      };
+    });
+
+    setListas(novasListas);
+
+    localStorage.setItem(
+      'albumLists',
+      JSON.stringify(novasListas)
+    );
+
+    setMostrarListas(false);
   }
 
   if (loading) {
@@ -91,9 +163,7 @@ export default function AlbumPage() {
 
   return (
     <main className="container py-5">
-
       <div className="row">
-
         <div className="col-md-4">
           {album.images?.[0] && (
             <img
@@ -105,19 +175,79 @@ export default function AlbumPage() {
         </div>
 
         <div className="col-md-8">
+          <div className="d-flex justify-content-between align-items-start">
+            <div>
+              <h1>
+                {album.name}{' '}
+                <span className="text-muted">
+                  ({album.release_date?.split('-')[0]})
+                </span>
+              </h1>
 
-          <h1>
-            {album.name}{' '}
-            <span className="text-muted">
-              ({album.release_date?.split('-')[0]})
-            </span>
-          </h1>
+              <h3>
+                {album.artists
+                  .map((artist) => artist.name)
+                  .join(', ')}
+              </h3>
+            </div>
 
-          <h3>
-            {album.artists
-              .map((artist) => artist.name)
-              .join(', ')}
-          </h3>
+            <div
+              style={{
+                position: 'relative',
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() =>
+                  setMostrarListas(!mostrarListas)
+                }
+                style={{
+                  fontSize: '25px',
+                  fontWeight: 'bold',
+                }}
+              >
+                ⋯
+              </button>
+
+              {mostrarListas && (
+                <div
+                  className="border rounded bg-white shadow"
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '45px',
+                    width: '220px',
+                    padding: '10px',
+                    zIndex: 100,
+                  }}
+                >
+                  <strong>Adicionar à lista</strong>
+
+                  <hr />
+
+                  {listas.length === 0 && (
+                    <p className="mb-0">
+                      Nenhuma lista criada.
+                    </p>
+                  )}
+
+                  {listas.map((lista) => (
+                    <button
+                      key={lista.id}
+                      type="button"
+                      className="btn btn-light w-100 text-start"
+                      onClick={() =>
+                        adicionarNaLista(lista.id)
+                      }
+                    >
+                      {lista.nome}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           <p>
             Lançamento: {album.release_date}
@@ -132,6 +262,22 @@ export default function AlbumPage() {
               Gravadora: {album.label}
             </p>
           )}
+
+          <div className="mt-3">
+            <button
+              type="button"
+              className={
+                listenLater
+                  ? 'btn btn-success'
+                  : 'btn btn-outline-success'
+              }
+              onClick={toggleListenLater}
+            >
+              {listenLater
+                ? '✓ Ouvir mais tarde'
+                : '+ Ouvir mais tarde'}
+            </button>
+          </div>
 
           <hr />
 
@@ -148,6 +294,7 @@ export default function AlbumPage() {
                   fontSize: '35px',
                   textDecoration: 'none',
                   padding: '2px',
+                  color: star <= rating ? '#ffc107' : '#e4e5e9',
                 }}
               >
                 {star <= rating ? '★' : '☆'}
@@ -169,7 +316,9 @@ export default function AlbumPage() {
               rows="6"
               placeholder="Escreva o que você achou deste álbum..."
               value={review}
-              onChange={(event) => setReview(event.target.value)}
+              onChange={(event) =>
+                setReview(event.target.value)
+              }
             />
           </div>
 
@@ -183,7 +332,6 @@ export default function AlbumPage() {
               Abrir no Spotify
             </a>
           </div>
-
         </div>
       </div>
 
@@ -201,7 +349,6 @@ export default function AlbumPage() {
           </li>
         ))}
       </ol>
-
     </main>
   );
 }
